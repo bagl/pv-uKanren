@@ -51,18 +51,37 @@ unify u' v' s = go (walk u' s) (walk v' s)
                                          then return s
                                          else mzero
 
-fresh :: VLabel -> (Term -> Goal) -> State -> Stream
+fresh :: VLabel -> (Term -> Goal) -> Goal
 fresh v f = f (var v)
 
 disj :: Goal -> Goal -> Goal
-disj g1 g2 sc = g1 sc <> g2 sc
+disj g1 g2 s = g1 s `mplus` g2 s
+
+mplus :: Stream -> Stream -> Stream
+mplus = interleave -- breath first - not working
+                   -- (<>) depth first
+
+interleave :: [a] -> [a] -> [a]
+interleave [] bs = bs
+interleave (a:as) bs = a : interleave bs as
 
 conj :: Goal -> Goal -> Goal
 conj g1 g2 sc = g1 sc >>= g2
 
+
+-- EXAMPLES
 aORb :: Goal
 aORb = conj (fresh "a" $ \a -> a === Atom "a")
             (fresh "b" $ \b -> disj (b === Var "a") (b === Atom "6"))
 
+fives :: Term -> Goal
+fives a = disj (a === Atom "5") (fives a)
+
+sixes :: Term -> Goal
+sixes a = disj (a === Atom "6") (fives a)
+
 main :: IO ()
-main = print $ aORb emptyState
+main = do
+  print $ aORb emptyState
+  print $ take 5 $ fresh "a" fives emptyState
+  print $ take 5 $ fresh "a" (\a -> disj (sixes a) (fives a)) emptyState
