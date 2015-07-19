@@ -1,4 +1,3 @@
-{-# LANGUAGE TupleSections #-}
 module UKanren where
 
 import Control.Monad (mzero)
