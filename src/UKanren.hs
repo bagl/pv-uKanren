@@ -4,24 +4,25 @@ import Control.Monad (mzero)
 import qualified Data.Map as M
 import Data.Monoid ((<>))
 
-data Term = Var Index
+data Term = Var VLabel Index
           | Atom String
           | Pair Term Term
           deriving (Eq, Ord)
 
 instance Show Term where
   show t = case t of
-    Var v    -> show v
+    Var v _  -> show v
     Atom a   -> '\'' : a
     Pair l r -> "(" ++ show l ++ ", " ++ show r ++ ")"
 
+type VLabel = String
 type Index = Int
 type Stream = [State]
 type State = (Subs, Index)
 type Subs = M.Map Term Term
 type Goal = State -> Stream
 
-var :: Index -> Term
+var :: VLabel -> Index -> Term
 var = Var
 
 emptyStream :: Stream
@@ -52,8 +53,8 @@ unify u' v' s = go (walk u' s) (walk v' s)
                                          then return s
                                          else mzero
 
-fresh :: (Term -> Goal) -> State -> Stream
-fresh f (s, c) = f (var c) (s, succ c)
+fresh :: VLabel -> (Term -> Goal) -> State -> Stream
+fresh v f (s, c) = f (var v c) (s, succ c)
 
 disj :: Goal -> Goal -> Goal
 disj g1 g2 sc = g1 sc <> g2 sc
@@ -62,8 +63,8 @@ conj :: Goal -> Goal -> Goal
 conj g1 g2 sc = g1 sc >>= g2
 
 aORb :: Goal
-aORb = conj (fresh $ \a -> a === Atom "a")
-            (fresh $ \b -> disj (b === Atom "5") (b === Atom "6"))
+aORb = conj (fresh "a" $ \a -> a === Atom "a")
+            (fresh "b" $ \b -> disj (b === Var "a" 0) (b === Atom "6"))
 
 main :: IO ()
 main = print $ aORb emptyState
