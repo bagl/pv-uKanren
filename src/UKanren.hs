@@ -1,14 +1,14 @@
 {-# LANGUAGE TupleSections #-}
-
 module UKanren where
 
 import Control.Monad (mzero)
+import qualified Data.Map as M
 import Data.Monoid ((<>))
 
 data Term = Var Index
           | Atom String
           | Pair Term Term
-          deriving (Eq)
+          deriving (Eq, Ord)
 
 instance Show Term where
   show t = case t of
@@ -19,7 +19,7 @@ instance Show Term where
 type Index = Int
 type Stream = [State]
 type State = (Subs, Index)
-type Subs = [(Term, Term)]
+type Subs = M.Map Term Term
 type Goal = State -> Stream
 
 var :: Index -> Term
@@ -29,14 +29,14 @@ emptyStream :: Stream
 emptyStream = []
 
 emptyState :: State
-emptyState = ([], 0)
+emptyState = (M.empty, 0)
 
 walk :: Term -> Subs -> Term
-walk v@Var{} subs = maybe v (`walk` subs) $ lookup v subs
-walk t       _    = t
+walk v@Var{} s = maybe v (`walk` s) $ M.lookup v s
+walk t       _ = t
 
 extend :: Term -> Term -> Subs -> Subs
-extend v a s = (v, a) : s
+extend = M.insert
 
 (===) :: Term -> Term -> Goal
 (===) u v (s, c) = case unify u v s of
