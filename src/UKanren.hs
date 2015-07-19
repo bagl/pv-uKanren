@@ -43,14 +43,14 @@ extend = M.insert
   Just s' -> return (s', c)
 
 unify :: Term -> Term -> Subs -> Maybe Subs
-unify u v s = go (walk u s) (walk v s)
-  where go u'@Var{} v'@Var{} | u' == v' = return s
-        go u'@Var{} v'                  = return $ extend u' v' s
-        go u'       v'@Var{}            = return $ extend v' u' s
-        go (Pair u1 u2) (Pair v1 v2)    = unify u1 v1 s >>= unify u2 v2
-        go u'       v'                  = if u' == v'
-                                            then return s
-                                            else mzero
+unify u' v' s = go (walk u' s) (walk v' s)
+  where go u@Var{} v@Var{} | u == v  = return s
+        go u@Var{} v                 = return $ extend u v s
+        go u       v@Var{}           = return $ extend v u s
+        go (Pair u1 u2) (Pair v1 v2) = unify u1 v1 s >>= unify u2 v2
+        go u       v                 = if u == v
+                                         then return s
+                                         else mzero
 
 fresh :: (Term -> Goal) -> State -> Stream
 fresh f (s, c) = f (var c) (s, succ c)
