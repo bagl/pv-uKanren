@@ -1,8 +1,8 @@
 module UKanren where
 
-import Control.Monad (mzero)
 import qualified Data.Map as M
-import Data.Monoid ((<>))
+import           Data.Monoid ((<>))
+import qualified Data.Set as S
 
 data Term = Var VLabel
           | Atom String
@@ -30,8 +30,11 @@ emptyState :: State
 emptyState = M.empty
 
 walk :: Term -> State -> Term
-walk v@Var{} s = maybe v (`walk` s) $ M.lookup v s
-walk t       _ = t
+walk t s = go S.empty t
+  where go visited v@Var{}
+          | S.member v visited = error $ "loop in walk!\nvar: " ++ show v ++ "\nstate: " ++ show s
+          | otherwise          = maybe v (`walk` s) $ M.lookup v s
+        go _ t' = t'
 
 extend :: Term -> Term -> State -> State
 extend = M.insert
@@ -43,13 +46,13 @@ extend = M.insert
 
 unify :: Term -> Term -> State -> Maybe State
 unify u' v' s = go (walk u' s) (walk v' s)
-  where go u@Var{} v@Var{} | u == v  = return s
-        go u@Var{} v                 = return $ extend u v s
-        go u       v@Var{}           = return $ extend v u s
+  where go u@Var{} v@Var{} | u == v  = Just s
+        go u@Var{} v                 = Just $ extend u v s
+        go u       v@Var{}           = Just $ extend v u s
         go (Pair u1 u2) (Pair v1 v2) = unify u1 v1 s >>= unify u2 v2
         go u       v                 = if u == v
-                                         then return s
-                                         else mzero
+                                         then Just s
+                                         else Nothing
 
 fresh :: VLabel -> (Term -> Goal) -> State -> Stream
 fresh v f = f (var v)
