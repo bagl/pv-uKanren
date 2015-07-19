@@ -158,21 +158,7 @@ inf56 = fresh "x" $ \x -> disj (r5 x) (r6 x)
   where r5 x = disj (x === Atom "5") (zzz $ r5 x)
         r6 x = disj (x === Atom "6") (zzz $ r6 x)
 
-five :: Goal
-five = fresh "x" $ \x ->  x === Atom "5"
-fives_ :: Term -> Goal
-fives_ x = disj (x === Atom "5") (zzz $ fives_ x)
-fives :: Goal
-fives = fresh "y" fives_
- 
-fivesRev_ :: Term -> Goal
-fivesRev_ x = disj (zzz $ fivesRev_ x) (x === Atom "5")
-fivesRev :: Goal
-fivesRev = fresh "y" fivesRev_
-
 main :: IO ()
 main = do
   print $ aORb emptyState
   print $ take 10 $ streamToList $ inf56 emptyState
-  print $ take 10 $ streamToList $ fives    emptyState
-  print $ take 10 $ streamToList $ fivesRev emptyState
